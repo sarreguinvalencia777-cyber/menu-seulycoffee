@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Menú Digital - Seul &amp; Coffee</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #FDF5EB; --text-color: #6E4B3E; --coral-color: #EF8275; 
+            --blue-color: #79B4C9; --white: #FFFFFF; --green-color: #4CAF50; 
+            --red-color: #F44336; --gray-color: #9E9E9E;
+        }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; padding-bottom: 80px; }
+        .container { padding: 15px; }
+        header { display: flex; align-items: center; margin-bottom: 20px; border-bottom: 3px dashed var(--coral-color); padding-bottom: 15px; }
+        header img { height: 70px; width: 70px; object-fit: cover; margin-right: 15px; border-radius: 50%; }
+        h1 { margin: 0; font-size: 1.5rem; }
+        h2 { margin: 0; font-size: 1.1rem; color: var(--coral-color); }
+        h3 { margin: 0 0 10px 0; font-size: 1.1rem; }
+        .shift-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-shift { flex: 1; padding: 10px; font-size: 1.1rem; font-weight: bold; border-radius: 12px; cursor: pointer; background-color: var(--white); color: var(--text-color); border: 2px solid var(--blue-color); text-align: center; transition: 0.2s; }
+        .btn-shift small { display: block; font-size: 0.8rem; font-weight: normal; color: #666; margin-top: 5px; }
+        .btn-shift.active { background-color: var(--blue-color); color: var(--white); }
+        .btn-shift.active small { color: #f0f0f0; }
+        .menu-section { display: none; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .menu-section.active { display: grid; }
+        .card { background-color: var(--white); border: 2px solid var(--coral-color); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card select { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--blue-color); border-radius: 8px; color: var(--text-color); font-family: inherit; font-size: 0.95rem; background: var(--bg-color); }
+        .btn-add { background-color: var(--coral-color); color: var(--white); border: none; padding: 12px 5px; margin-top: 5px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; width: 100%; }
+        .btn-add:active { background-color: #d96f63; transform: scale(0.98); }
+        .btn-group { display: flex; flex-direction: column; gap: 5px; }
+        .cart-container { background-color: var(--white); border-top: 4px solid var(--blue-color); border-radius: 20px 20px 0 0; padding: 20px 15px; margin-top: 30px; }
+        .checkout-inputs { background-color: var(--bg-color); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--coral-color); display: flex; flex-direction: column; gap: 10px; }
+        .checkout-inputs input, .checkout-inputs textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit; font-size: 1rem; color: var(--text-color); box-sizing: border-box; }
+        .checkout-inputs textarea { height: 70px; }
+        .cart-items { margin-bottom: 15px; border-bottom: 2px solid var(--text-color); max-height: 250px; overflow-y: auto; }
+        .cart-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #ccc; }
+        .cart-item button { background: rgba(244, 67, 54, 0.1); border: none; color: var(--red-color); padding: 5px 10px; border-radius: 5px; font-weight: bold; }
+        .total-section { font-size: 1.8rem; font-weight: bold; text-align: right; color: var(--coral-color); margin-bottom: 15px; }
+        .btn-save { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; background-color: var(--blue-color); color: var(--white); }
+        .floating-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--coral-color); color: white; padding: 15px 20px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); z-index: 1000; }
+        .floating-bar .total-float { font-size: 1.5rem; font-weight: bold; }
+        .floating-bar button { background: var(--white); color: var(--coral-color); border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="https://i.postimg.cc/y8sn4Ryw/1777120824064-(2).png" alt="Logo Seul and Coffee" onerror="this.style.display='none'">
+            <div>
+                <h1>Seul &amp; Coffee</h1>
+                <h2>Realiza tu pedido aquí 👇</h2>
+            </div>
+        </header>
+
+        <div class="shift-buttons">
+            <div class="btn-shift active" id="btnManana" onclick="toggleShift('manana')">
+                🌞 Mañana <small>8:00 a 12:00</small>
+            </div>
+            <div class="btn-shift" id="btnTarde" onclick="toggleShift('tarde')">
+                🌙 Tarde <small>2:00 a 9:00</small>
+            </div>
+        </div>
+
+        <div id="menu-manana" class="menu-section active">
+            <!-- MENÚ MAÑANA -->
+            <div class="card"><h3>Capuchino</h3><select id="sabor-capuchino"><option value="Moka">Moka</option><option value="Vainilla Fran.">Vainilla Fran.</option></select><div class="btn-group"><button class="btn-add" onclick="addItem('Capuchino', 'sabor-capuchino', 'Ch', 18)">Chico $18</button><button class="btn-add" onclick="addItem('Capuchino', 'sabor-capuchino', 'G', 20)">Grande $20</button></div></div>
+            <div class="card"><h3>Té</h3><select id="sabor-te"><option value="Manzanilla">Manzanilla</option><option value="Hierba Buena">Hierba Buena</option></select><div class="btn-group"><button class="btn-add" onclick="addItem('Té', 'sabor-te', 'Ch', 15)">Chico $15</button><button class="btn-add" onclick="addItem('Té', 'sabor-te', 'G', 18)">Grande $18</button></div></div>
+            <div class="card"><h3>Café Americano</h3><div class="btn-group"><button class="btn-add" onclick="addItemSimple('Americano Ch', 15)">Chico $15</button><button class="btn-add" onclick="addItemSimple('Americano G', 18)">Grande $18</button></div></div>
+            <div class="card"><h3>Capuchino Frío</h3><select id="sabor-capuchino-frio"><option value="Moka">Moka</option><option value="Vainilla Fran.">Vainilla Fran.</option></select><div class="btn-group"><button class="btn-add" onclick="addItem('Capuchino Frío', 'sabor-capuchino-frio', 'Ch', 28)">Chico $28</button><button class="btn-add" onclick="addItem('Capuchino Frío', 'sabor-capuchino-frio', 'G', 30)">Grande $30</button></div></div>
+            <div class="card"><h3>Americano Frío</h3><div class="btn-group"><button class="btn-add" onclick="addItemSimple('Amer. Frío Ch', 25)">Chico $25</button><button class="btn-add" onclick="addItemSimple('Amer. Frío G', 28)">Grande $28</button></div></div>
+            <div class="card"><h3>Chilaquiles</h3><div class="btn-group"><button class="btn-add" onclick="addItemSimple('Chil. Pollo', 40)">Pollo $40</button><button class="btn-add" onclick="addItemSimple('Chil. Bistec', 50)">Bistec $50</button></div></div>
+            <div class="card"><h3>Antojos Salados</h3><div class="btn-group"><button class="btn-add" onclick="addItemSimple('Sincronizadas', 20)">Sincronizadas $20</button><button class="btn-add" onclick="addItemSimple('Cuernitos', 20)">Cuernitos $20</button><button class="btn-add" onclick="addItemSimple('Sándwich', 20)">Sándwich $20</button></div></div>
+            <div class="card"><h3>Panadería</h3><div class="btn-group"><button class="btn-add" onclick="addItemSimple('Pan Casero', 12)">Pan Casero $12</button><button class="btn-add" onclick="addItemSimple('Mini Hot Cakes', 30)">Hot Cakes $30</button><button class="btn-add" onclick="addItemSimple('Donitas', 30)">Donitas $30</button><button class="btn-add" onclick="addItemSimple('Pancitos', 20)">Pancitos $20</button></div></div>
+        </div>
+
+        <div id="menu-tarde" class="menu-section">
+            <!-- MENÚ TARDE -->
+            <div class="card"><h3>Malteadas</h3><select id="sabor-malteada"><option value="Chocolate">Chocolate</option><option value="Fresa">Fresa</option><option value="Galleta">Galleta</option><option value="Vainilla">Vainilla</option></select><div class="btn-group"><button class="btn-add" onclick="addItem('Malteada', 'sabor-malteada', 'Ch', 35)">Chico $35</button><button class="btn-add" onclick="addItem('Malteada', 'sabor-malteada', 'G', 55)">Grande $55</button></div></div>
+            <div class="card"><h3>Sodas Italianas</h3><select id="sabor-soda"><option value="Manzana V.">Manzana V.</option><option value="Mora Azul">Mora Azul</option><option value="Cereza">Cereza</option><option value="Normal">Normal</option><option value="Frutos Rojos">Frutos R.</option><option value="Fresa">Fresa</option><option value="Mango">Mango</option></select><div class="btn-group"><button class="btn-add" onclick="addItem('Soda ICE', 'sabor-soda', 'Ch', 30)">Chico $30</button><button class="btn-add" onclick="addItem('Soda ICE', 'sabor-soda', 'G', 50)">Grande $50</button></div></div>
+            <div class="card"><h3>Banderillas</h3><div class="btn-group"><button class="btn-add" onclick="addItemSimple('Band. Salchicha', 40)">Salchicha $40</button><button class="btn-add" onclick="addItemSimple('Band. Queso', 55)">Queso $55</button><button class="btn-add" onclick="addItemSimple('Band. Mixta', 50)">Mixta $50</button></div></div>
+            <div class="card"><h3>Bites Coreanos</h3><button class="btn-add" onclick="addItemSimple('Bites Coreanos', 50)">Bites $50</button></div>
+            <div class="card"><h3>Frappuccino</h3><select id="sabor-frape-leche"><option value="Moka">Moka</option><option value="Vainilla F.">Vainilla F.</option></select><div class="btn-group"><button class="btn-add" onclick="addItem('Frapé Leche', 'sabor-frape-leche', 'Ch', 30)">Chico $30</button><button class="btn-add" onclick="addItem('Frapé Leche', 'sabor-frape-leche', 'G', 50)">Grande $50</button></div></div>
+            <div class="card"><h3>ICE</h3><select id="sabor-frape-agua"><option value="Manzana V.">Manzana V.</option><option value="Mora Azul">Mora Azul</option><option value="Cereza">Cereza</option><option value="Normal">Normal</option><option value="Frutos Rojos">Frutos R.</option><option value="Fresa">Fresa</option><option value="Mango">Mango</option></select><div class="btn-group"><button class="btn-add" onclick="addItem('Frapé Agua', 'sabor-frape-agua', 'Ch', 35)">Chico $35</button><button class="btn-add" onclick="addItem('Frapé Agua', 'sabor-frape-agua', 'G', 55)">Grande $55</button></div></div>
+        </div>
+    </div>
+
+    <div class="cart-container" id="seccion-cobro">
+        <h2 style="font-size: 1.5rem; margin-top: 0;">Tu Pedido</h2>
+        <div class="checkout-inputs">
+            <input type="text" id="input-negocio" placeholder="Tu Nombre (Ej. Juan)">
+            <textarea id="input-notas" placeholder="Instrucciones especiales (Ej: Para llevar, sin cebolla, deslactosada...)"></textarea>
+        </div>
+        <div class="cart-items" id="cart-list"></div>
+        <div class="total-section">Total: $<span id="total-price">0</span></div>
+        <button class="btn-save" onclick="guardarPedidoFirebase()">Enviar Pedido a Barra</button>
+    </div>
+
+    <div class="floating-bar" id="float-bar" style="display: none;">
+        <div class="total-float">$<span id="float-total">0</span></div>
+        <button onclick="irACobrar()">Ver Pedido 🛒</button>
+    </div>
+
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyAwJsq0IUBZjvMc_7x9aiSPYPAFXA9bG8U", authDomain: "seulycoffee.firebaseapp.com", databaseURL: "https://seulycoffee-default-rtdb.firebaseio.com", projectId: "seulycoffee", storageBucket: "seulycoffee.firebasestorage.app", messagingSenderId: "386106880587", appId: "1:386106880587:web:0acf0697c7bae3854353ce", measurementId: "G-7VXBX27GXQ" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let order = []; let total = 0;
+
+        function toggleShift(shift) {
+            document.getElementById('menu-manana').classList.remove('active'); document.getElementById('menu-tarde').classList.remove('active');
+            document.getElementById('btnManana').classList.remove('active'); document.getElementById('btnTarde').classList.remove('active');
+            if (shift === 'manana') { document.getElementById('menu-manana').classList.add('active'); document.getElementById('btnManana').classList.add('active'); } 
+            else { document.getElementById('menu-tarde').classList.add('active'); document.getElementById('btnTarde').classList.add('active'); }
+        }
+
+        function addItem(baseName, selectId, size, price) {
+            const flavor = document.getElementById(selectId).value;
+            order.push({ id: Date.now() + Math.random(), name: `${baseName} ${flavor} (${size})`, price });
+            updateCart(); navigator.vibrate && navigator.vibrate(50);
+        }
+
+        function addItemSimple(name, price) {
+            order.push({ id: Date.now() + Math.random(), name, price });
+            updateCart(); navigator.vibrate && navigator.vibrate(50);
+        }
+
+        function removeItem(id) { order = order.filter(item => item.id !== id); updateCart(); }
+
+        function updateCart() {
+            const cartList = document.getElementById('cart-list'); cartList.innerHTML = ''; total = 0;
+            order.forEach(item => {
+                total += item.price;
+                const div = document.createElement('div'); div.className = 'cart-item';
+                div.innerHTML = `<span>${item.name}</span><span>$${item.price} <button onclick="removeItem(${item.id})">X</button></span>`;
+                cartList.appendChild(div);
+            });
+            document.getElementById('total-price').innerText = total; document.getElementById('float-total').innerText = total;
+            document.getElementById('float-bar').style.display = total > 0 ? 'flex' : 'none';
+        }
+
+        function irACobrar() { document.getElementById('seccion-cobro').scrollIntoView({ behavior: 'smooth' }); }
+
+        function guardarPedidoFirebase() {
+            if (order.length === 0) { alert('Agrega productos primero.'); return; }
+            let nombreCliente = document.getElementById('input-negocio').value;
+            if (nombreCliente.trim() === '') { alert('Por favor, ingresa tu nombre para el pedido.'); return; }
+
+            const nuevoPedido = {
+                fecha: Date.now(), hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                negocio: nombreCliente, notas: document.getElementById('input-notas').value,
+                estado: 'Pendiente', pago: 'Pendiente', productos: order.map(p => p.name), total: total 
+            };
+
+            db.ref('pedidos').push(nuevoPedido).then(() => {
+                order = []; document.getElementById('input-negocio').value = ''; document.getElementById('input-notas').value = ''; updateCart();
+                alert('¡Tu pedido ha sido enviado a la barra! Te avisaremos cuando esté listo para pago y entrega.');
+                window.scrollTo(0, 0);
+            }).catch((error) => { alert('Hubo un error al enviar: ' + error.message); });
+        }
+    </script>
+</body>
+</html>
