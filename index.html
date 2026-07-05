@@ -111,6 +111,8 @@
         const db = firebase.database();
         let order = []; let total = 0;
 
+        
+        // Programa de Tristan Saul Arreguin Valencia
         // OÍDO DIGITAL PARA OCULTAR/MOSTRAR MENÚ
         db.ref('configuracion/menu').on('value', (snapshot) => {
             const menuStatus = snapshot.val();
